@@ -443,6 +443,10 @@ def complete_sample_area_selection():
         toggle_move(True)
     else:
         config.save_current_config()
+        check_routine_btn.configure(state=tk.NORMAL)
+        resize_preview_btn.configure(state=tk.NORMAL)
+        hide_preview_btn.configure(state=tk.NORMAL)
+        preview_refresh_delay = 2000
 
 def transform_preview_coordinate(coord: tuple, image_width: int, image_height: int) -> tuple:
     global config
