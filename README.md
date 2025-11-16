@@ -18,24 +18,35 @@ It's possible to configure:
 
 
 ## Controls
-The program is not designed to be particularly user friendly or pretty. So here's a full list of controls (as of 2025-04-18):
+The program is not designed to be particularly user friendly or pretty. So here's a full list of controls (as of 2025-11-16):
 
 ### Checking encounters
 - Start checking encounters by pressing the appropriate button or hitting ^
 - Stop checking encounters by pressing the appropriate button or hitting ESC
 
-### Configure game size and location
-When starting for the first time or clearing the config you automatically start the configuration of the games location (resize event).<br/>
-This can be triggered again by pressing the appropriate button.
-- Once the resize event has been triggered the program minimizes and is looking for your next mouse clicks.
+### Configure game size
+When starting for the first time or clearing the config the view is automatically set to the main monitor.
+If the monitors could not be determined (other functionality to move play area will break too) you have to define the screen size in the following way:<br/>
+- First the program minimizes and is looking for your next mouse clicks.
   - Your very next left mouse click should be on the top left corner of your game window.
   - Your second left mouse click should be on the bottom right corner of your game window.<br/>
     (Note that the program will keep listening for left mouse clicks until you click somewhere below and to the right of your first click. Clicking above or to the left of your first click won't register.)
+
+- When clicking on the "Resize" button you'll enter resize mode.<br/>
+  The button now reads "Accept".
+  - Use the arrow keys to increase the size of the game window or hold control to decrease the size of the game window.<br/>
+    Holding shift increases the speed at which the size changes.
+  - Press R to set the game view to your main monitor.
+  - Press number keys to set the game view to any one of your monitors (up to 10 monitors possible).
+  - Press "Accept" to save your current changes to the config.
+  - Press ESC to discard your changes.
+
+### Configure game location
 - To just move the game location without changing the size you can click on the "Move" button. This updates the view to show the current detection area (it may take up to 2 seconds depending on the last preview update).
-  - To start moving the window you can either hold left click on the preview and move it with your mouse or use the arrow keys.<br/>
-    Holding Shift while using the arrow keys makes it move faster.
-  - Press the "Move" button again (which now reads "Accept") to apply the changes made and save them to the config.
-  - Press ESC to revert the changes and exit move mode
+- To start moving the window you can either hold left click on the preview and move it with your mouse or use the arrow keys.<br/>
+  Holding Shift while using the arrow keys makes it move faster.
+- Press the "Move" button again (which now reads "Accept") to apply the changes made and save them to the config.
+- Press ESC to revert the changes and exit move mode.
 
 ### Configure detection area
 By default the game checks about 10% in the center of the game window.<br/>
@@ -43,7 +54,8 @@ To make any changes start by making a double left click on the preview. You'll s
 - By left clicking the preview repeatedly you can set the coordinates of the detection are in alternating order to your cursors location
 - You can also hold left click and move your mouse to define the area. This sets the coordinates to where you first pressed down and where you let go. The preview will not update while dragging your mouse.
 - Using the arrow keys let's you increase the size of the detection area.
-- Holding Shift and pressing the arrow keys let's you decrease the size of the detection area.
+- Holding control and pressing the arrow keys let's you decrease the size of the detection area.<br/>
+  Holding shift increases the speed at which the size changes.
 - Press the "Move" button to enter move mode.
   - To start moving the detection area you can either hold left click on the preview and move it with your mouse or use the arrow keys.<br/>
     Holding Shift while using the arrow keys makes it move faster.
