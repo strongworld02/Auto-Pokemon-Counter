@@ -28,6 +28,8 @@ selected_color: list[int] = None
 preview_width: int = 640
 preview_height: int = 360
 preview_refresh_delay: int = 2000
+SLOW_DELAY: int = 2000
+FAST_DELAY: int = 200
 
 counter: float = 0
 show_preview: bool = True
@@ -37,10 +39,12 @@ is_on_encounter: bool = False
 sample_area_selector_active: bool = False
 post_double_click: bool = False
 move_mode: bool = False
+resize_mode: bool = False
 
 sample_select_drag_start: tuple | None = None
 last_drag_position: tuple | None = None
 ctrl_pressed: bool = False
+shift_pressed: bool = False
 
 config: Config = None
 sound: SoundPlayer = SoundPlayer()
@@ -54,9 +58,14 @@ def on_press(key):
     global defining_color
     global move_mode
     global sample_area_selector_active
+    global shift_pressed
 
     if (key == Key.ctrl or key == Key.ctrl_l or key == Key.ctrl_r):
         ctrl_pressed = True
+        return
+    
+    if (key == Key.shift or key == Key.shift_l or key == Key.shift_r):
+        shift_pressed = True
         return
     
     if key == Key.esc:
@@ -64,6 +73,8 @@ def on_press(key):
             complete_sample_area_selection()
         elif move_mode:
             toggle_move(False)
+        elif resize_mode:
+            toggle_resize(False)
         if not exit_script:
             disable_encounter_check()
         if defining_color:
@@ -79,27 +90,27 @@ def on_press(key):
         if (not move_mode):
             if key == Key.up:
                 if ctrl_pressed:
-                    config.modify_sample_bounding_box(config.Border.BOTTOM, -1, False)
+                    config.modify_sample_bounding_box(config.Border.BOTTOM, -5 if shift_pressed else -1, False)
                 else:
-                    config.modify_sample_bounding_box(config.Border.TOP, 1, False)
+                    config.modify_sample_bounding_box(config.Border.TOP, 5 if shift_pressed else 1, False)
                 return
             elif key == Key.down:
                 if ctrl_pressed:
-                    config.modify_sample_bounding_box(config.Border.TOP, -1, False)
+                    config.modify_sample_bounding_box(config.Border.TOP, -5 if shift_pressed else -1, False)
                 else:
-                    config.modify_sample_bounding_box(config.Border.BOTTOM, 1, False)
+                    config.modify_sample_bounding_box(config.Border.BOTTOM, 5 if shift_pressed else 1, False)
                 return
             elif key == Key.left:
                 if ctrl_pressed:
-                    config.modify_sample_bounding_box(config.Border.RIGHT, -1, False)
+                    config.modify_sample_bounding_box(config.Border.RIGHT, -5 if shift_pressed else -1, False)
                 else:
-                    config.modify_sample_bounding_box(config.Border.LEFT, 1, False)
+                    config.modify_sample_bounding_box(config.Border.LEFT, 5 if shift_pressed else 1, False)
                 return
             elif key == Key.right:
                 if ctrl_pressed:
-                    config.modify_sample_bounding_box(config.Border.LEFT, -1, False)
+                    config.modify_sample_bounding_box(config.Border.LEFT, -5 if shift_pressed else -1, False)
                 else:
-                    config.modify_sample_bounding_box(config.Border.RIGHT, 1, False)
+                    config.modify_sample_bounding_box(config.Border.RIGHT, 5 if shift_pressed else 1, False)
                 return
         try:
             if key.char == 'r':
@@ -111,29 +122,80 @@ def on_press(key):
     if move_mode:
         if key == Key.up:
             if sample_area_selector_active:
-                config.move_sample_area(0, -5 if ctrl_pressed else -1, False)
+                config.move_sample_area(0, -5 if shift_pressed else -1, False)
             else:
-                config.move_view(0, -5 if ctrl_pressed else -1, False)
+                config.move_view(0, -5 if shift_pressed else -1, False)
             return
         elif key == Key.down:
             if sample_area_selector_active:
-                config.move_sample_area(0, 5 if ctrl_pressed else 1, False)
+                config.move_sample_area(0, 5 if shift_pressed else 1, False)
             else:
-                config.move_view(0, 5 if ctrl_pressed else 1, False)
+                config.move_view(0, 5 if shift_pressed else 1, False)
             return
         elif key == Key.left:
             if sample_area_selector_active:
-                config.move_sample_area(-5 if ctrl_pressed else -1, 0, False)
+                config.move_sample_area(-5 if shift_pressed else -1, 0, False)
             else:
-                config.move_view(-5 if ctrl_pressed else -1, 0, False)
+                config.move_view(-5 if shift_pressed else -1, 0, False)
             return
         elif key == Key.right:
             if sample_area_selector_active:
-                config.move_sample_area(5 if ctrl_pressed else 1, 0, False)
+                config.move_sample_area(5 if shift_pressed else 1, 0, False)
             else:
-                config.move_view(5 if ctrl_pressed else 1, 0, False)
+                config.move_view(5 if shift_pressed else 1, 0, False)
             return
 
+    if resize_mode:
+        if key == Key.up:
+            if ctrl_pressed:
+                config.modify_view_bounding_box(config.Border.BOTTOM, -5 if shift_pressed else -1, False)
+            else:
+                config.modify_view_bounding_box(config.Border.TOP, 5 if shift_pressed else 1, False)
+            return
+        elif key == Key.down:
+            if ctrl_pressed:
+                config.modify_view_bounding_box(config.Border.TOP, -5 if shift_pressed else -1, False)
+            else:
+                config.modify_view_bounding_box(config.Border.BOTTOM, 5 if shift_pressed else 1, False)
+            return
+        elif key == Key.left:
+            if ctrl_pressed:
+                config.modify_view_bounding_box(config.Border.RIGHT, -5 if shift_pressed else -1, False)
+            else:
+                config.modify_view_bounding_box(config.Border.LEFT, 5 if shift_pressed else 1, False)
+            return
+        elif key == Key.right:
+            if ctrl_pressed:
+                config.modify_view_bounding_box(config.Border.LEFT, -5 if shift_pressed else -1, False)
+            else:
+                config.modify_view_bounding_box(config.Border.RIGHT, 5 if shift_pressed else 1, False)
+            return
+        try:
+            if key.char == 'r':
+                config.set_view_default(False)
+            elif key.char == '1':
+                config.set_view_to_full_screen(0, False)
+            elif key.char == '2':
+                config.set_view_to_full_screen(1, False)
+            elif key.char == '3':
+                config.set_view_to_full_screen(2, False)
+            elif key.char == '4':
+                config.set_view_to_full_screen(3, False)
+            elif key.char == '5':
+                config.set_view_to_full_screen(4, False)
+            elif key.char == '6':
+                config.set_view_to_full_screen(5, False)
+            elif key.char == '7':
+                config.set_view_to_full_screen(6, False)
+            elif key.char == '8':
+                config.set_view_to_full_screen(7, False)
+            elif key.char == '9':
+                config.set_view_to_full_screen(8, False)
+            elif key.char == '0':
+                config.set_view_to_full_screen(9, False)
+        except AttributeError:
+            pass
+        
     if exit_script:
         try:
             if key.char == '^' and check_routine_btn["state"] != "disabled":
@@ -151,8 +213,12 @@ def on_press(key):
 
 def on_release(key):
     global ctrl_pressed
+    global shift_pressed
     if (key == Key.ctrl or key == Key.ctrl_l or key == Key.ctrl_r):
         ctrl_pressed = False
+
+    if (key == Key.shift or key == Key.shift_l or key == Key.shift_r):
+        shift_pressed = False
 
 def update_counter(value: int | float):
     global counter
@@ -357,7 +423,10 @@ def enable_check_routine_btn():
     check_routine_btn.configure(state=tk.NORMAL)
     resize_preview_btn.configure(state=tk.NORMAL)
 
-def resize_preview():
+""""
+Promts the user to define the game view by clicking on the corners outside of this application
+"""
+def resize_preview_outside():
     global exit_script
     global resize_thread
     if not exit_script:
@@ -384,8 +453,10 @@ def selected_color_changed(event):
     update_color_preview()
     if selected_item != "Custom":
         set_encounter_color_btn.grid_forget()
+        move_btn.grid(column=1, columnspan=2, row=1)
     else:
         set_encounter_color_btn.grid(column=1, row=1)
+        move_btn.grid(column=2, columnspan=1, row=1)
 
 def start_define_custom_color():
     global defining_color
@@ -394,7 +465,7 @@ def start_define_custom_color():
     color_selection_message_label.configure(text="Press Space to save currently detected color")
     defining_color = True
     set_encounter_color_btn.configure(state=tk.DISABLED)
-    preview_refresh_delay = 250
+    preview_refresh_delay = FAST_DELAY
 
 def stop_define_custom_color(save: bool):
     global config
@@ -405,7 +476,7 @@ def stop_define_custom_color(save: bool):
     defining_color = False
     color_selection_message_label.configure(text="")
     set_encounter_color_btn.configure(state=tk.NORMAL)
-    preview_refresh_delay = 2000
+    preview_refresh_delay = SLOW_DELAY
     if (save):
         selected_color = grab_average_color()
         config.set_selected_color(selected_color)
@@ -422,7 +493,7 @@ def enable_sample_area_selector(event):
     
     if not show_preview:
         toggle_preview()
-    preview_refresh_delay = 250
+    preview_refresh_delay = FAST_DELAY
     sample_area_selector_active = True
     message_label.configure(text="Sample area selector enabled. Press 'r' for default and 'esc' to exit. " +
                             "Left click on preview to change area.")
@@ -446,7 +517,7 @@ def complete_sample_area_selection():
         check_routine_btn.configure(state=tk.NORMAL)
         resize_preview_btn.configure(state=tk.NORMAL)
         hide_preview_btn.configure(state=tk.NORMAL)
-        preview_refresh_delay = 2000
+        preview_refresh_delay = SLOW_DELAY
 
 def transform_preview_coordinate(coord: tuple, image_width: int, image_height: int) -> tuple:
     global config
@@ -519,7 +590,7 @@ def toggle_move(save: bool):
         check_routine_btn.configure(state=tk.NORMAL)
         resize_preview_btn.configure(state=tk.NORMAL)
         hide_preview_btn.configure(state=tk.NORMAL)
-        preview_refresh_delay = 2000
+        preview_refresh_delay = SLOW_DELAY
     else:
         if not show_preview:
             toggle_preview()
@@ -531,7 +602,34 @@ def toggle_move(save: bool):
             move_btn.configure(text="Change Shape")
         else:
             move_btn.configure(text="Accept")
-        preview_refresh_delay = 70
+        preview_refresh_delay = FAST_DELAY
+
+def toggle_resize(save: bool):
+    global config
+    global resize_mode
+    global preview_refresh_delay
+    global show_preview
+    if resize_mode:
+        resize_mode = False
+        resize_preview_btn.configure(text="Resize")
+        if save:
+            config.save_current_config()
+        else:
+            config.load_config()
+        check_routine_btn.configure(state=tk.NORMAL)
+        move_btn.configure(state=tk.NORMAL)
+        hide_preview_btn.configure(state=tk.NORMAL)
+        preview_refresh_delay = SLOW_DELAY
+    else:
+        if not show_preview:
+            toggle_preview()
+        resize_mode = True
+        check_routine_btn.configure(state=tk.DISABLED)
+        move_btn.configure(state=tk.DISABLED)
+        hide_preview_btn.configure(state=tk.DISABLED)
+        resize_preview_btn.configure(text="Accept")
+        preview_refresh_delay = FAST_DELAY
+    return
 
 selected_color_combo_item = tk.StringVar()
 
@@ -546,7 +644,7 @@ color_selection_message_label = tk.Label(root, text="", justify=tk.RIGHT, font=(
 hide_preview_btn = tk.Button(pic_frame, text="Toggle Preview", command=toggle_preview, width=12)
 set_encounter_color_btn = tk.Button(pic_frame, text="Define Color", command=start_define_custom_color, width=12)
 move_btn = tk.Button(pic_frame, text="Move", command=lambda: toggle_move(True), width=12)
-resize_preview_btn = tk.Button(pic_frame, text="Resize", command=resize_preview, width=12)
+resize_preview_btn = tk.Button(pic_frame, text="Resize", command=lambda: toggle_resize(True), width=12)
 check_routine_btn = tk.Button(root, text="Start checking encounters", bg="green", command=toggle_encounter_check)
 
 preview_label = tk.Label(preview_label_frame, image="")
@@ -583,7 +681,7 @@ resize_preview_btn.grid(column=3, row=1)
 config = Config(config_file_name)
 if config.bounding_box() == None:
     show_preview = False
-    resize_preview()
+    resize_preview_outside()
 
 preview_label.bind("<Double-Button-1>", enable_sample_area_selector)
 preview_label.bind("<Button-1>", preview_mouse_down)
@@ -596,6 +694,7 @@ if initial_color_selection != None:
     selected_color_changed(None)
 else:
     set_encounter_color_btn.grid_forget()
+    move_btn.grid(column=1, columnspan=2, row=1)
 
 change_step_size(0)
 update_preview()

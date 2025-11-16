@@ -19,7 +19,7 @@ class Config:
     _last_sample: tuple = None
     _monitors: list[Monitor] = None
 
-    _step_size: float = 1
+    _step_size: float = 1.0
     _top_left: tuple = None
     _bottom_right: tuple = None
     _bounding_box: tuple = None
@@ -89,6 +89,33 @@ class Config:
         if save:
             self._write_config_file()
     
+    def set_view_default(self, save: bool):
+        self._set_default_view_bounding_box()
+        if save:
+            self._write_config_file()
+
+    def set_view_to_full_screen(self, monitor: int, save: bool):
+        if (self._monitors == None):
+            self._monitors = get_monitors()
+        if (self._monitors != None and len(self._monitors) > monitor):
+            self._set_view_to_monitor(self._monitors[monitor])
+        if save:
+            self._write_config_file()
+
+    def modify_view_bounding_box(self, border: Border, modifier: int, save: bool):
+        if (modifier == 0 or self._bounding_box == None):
+            return
+        
+        temp = self._modify_bounding_box(border, self._bounding_box, modifier)
+        if (not self._check_monitor_dimensions(temp[0], temp[1], temp[2], temp[3])):
+            return
+        self._bounding_box = temp
+        self._top_left = (self._bounding_box[0], self._bounding_box[1])
+        self._bottom_right = (self._bounding_box[2], self._bounding_box[3])
+        self._limit_sample_bounding_box()
+        if save:
+            self._write_config_file()
+
     def modify_sample_bounding_box(self, border: Border, modifier: int, save: bool):
         if (modifier == 0 or self._bounding_box == None):
             return
@@ -96,18 +123,7 @@ class Config:
         if self._sample_bounding_box == None:
             self._sample_bounding_box = self._get_default_sample_bounding_box()
 
-        if border == self.Border.TOP:
-            if (self._sample_bounding_box[1] - modifier) < self._sample_bounding_box[3]:
-                self._sample_bounding_box = (self._sample_bounding_box[0], self._sample_bounding_box[1] - modifier, self._sample_bounding_box[2], self._sample_bounding_box[3])
-        elif border == self.Border.RIGHT:
-            if self._sample_bounding_box[0] < (self._sample_bounding_box[2] + modifier):
-                self._sample_bounding_box = (self._sample_bounding_box[0], self._sample_bounding_box[1], self._sample_bounding_box[2] + modifier, self._sample_bounding_box[3])
-        elif border == self.Border.BOTTOM:
-            if self._sample_bounding_box[1] < (self._sample_bounding_box[3] + modifier):
-                self._sample_bounding_box = (self._sample_bounding_box[0], self._sample_bounding_box[1], self._sample_bounding_box[2], self._sample_bounding_box[3] + modifier)
-        elif border == self.Border.LEFT:
-            if (self._sample_bounding_box[0] - modifier) < self._sample_bounding_box[2]:
-                self._sample_bounding_box = (self._sample_bounding_box[0] - modifier, self._sample_bounding_box[1], self._sample_bounding_box[2], self._sample_bounding_box[3])
+        self._sample_bounding_box = self._modify_bounding_box(border, self._sample_bounding_box, modifier)
         self._limit_sample_bounding_box()
         if save:
             self._write_config_file()
@@ -156,32 +172,12 @@ class Config:
     def move_view(self, horizontal: int, vertical: int, save: bool):
         if self._bounding_box == None:
             return
-        if self._monitors == None:
-            self._monitors = get_monitors()
+        
         min_x = self._top_left[0] + horizontal
         min_y = self._top_left[1] + vertical
         max_x = self._bottom_right[0] + horizontal
         max_y = self._bottom_right[1] + vertical
-
-        tl_ok = False
-        bl_ok = False
-        tr_ok = False
-        br_ok = False
-        for m in self._monitors:
-            min_x_ok = min_x <= (m.x + m.width) and min_x >= m.x
-            min_y_ok = min_y <= (m.y + m.height) and min_y >= m.y
-            max_x_ok = max_x <= (m.x + m.width) and max_x >= m.x
-            max_y_ok = max_y <= (m.y + m.height) and max_y >= m.y
-            if (min_x_ok and min_y_ok):
-                tl_ok = True
-            if (min_x_ok and max_y_ok):
-                bl_ok = True
-            if (max_x_ok and min_y_ok):
-                tr_ok = True
-            if (max_x_ok and max_y_ok):
-                br_ok = True
-        
-        if (not tl_ok or not bl_ok or not tr_ok or not br_ok):
+        if not self._check_monitor_dimensions(min_x, min_y, max_x, max_y):
             return
         self._top_left = (min_x, min_y)
         self._bottom_right = (max_x, max_y)
@@ -228,10 +224,18 @@ class Config:
             self._read_config_file()
 
     def _create_config_file(self):
-        config_file = open(self._config_file_name, "w")
-        config_file.write("bounding_box=\nsample_bounding_box=default\nstep_size=" + str(self._step_size) +
-                          "\ncolor_indicating_encounter=White\ncustom_color=")
+        # Set defaults
         self._selected_color = self._average_white
+        self._step_size = 1.0
+        self._set_default_view_bounding_box()
+        
+        # Write config
+        config_file = open(self._config_file_name, "w")
+        config_file.write("bounding_box=" + (','.join(str(x) for x in (self._bounding_box)) if self._bounding_box != None else "") +
+                          "\nsample_bounding_box=default" +
+                          "\nstep_size=" + str(self._step_size) +
+                          "\ncolor_indicating_encounter=" + self.selected_color_str() +
+                          "\ncustom_color=")
 
     def _write_config_file(self):
         config_file = open(self._config_file_name, "w")
@@ -405,3 +409,63 @@ class Config:
             self._sample_bounding_box = (self._bounding_box[2], self._sample_bounding_box[1], self._sample_bounding_box[2], self._sample_bounding_box[3])
         if (self._sample_bounding_box[1] > self._bounding_box[3]):
             self._sample_bounding_box = (self._sample_bounding_box[0], self._bounding_box[3], self._sample_bounding_box[2], self._sample_bounding_box[3])
+
+    def _modify_bounding_box(self, border: Border, boundingBox: tuple, modifier: int) -> tuple:
+        if border == self.Border.TOP:
+            if (boundingBox[1] - modifier) < boundingBox[3]:
+                boundingBox = (boundingBox[0], boundingBox[1] - modifier, boundingBox[2], boundingBox[3])
+        elif border == self.Border.RIGHT:
+            if boundingBox[0] < (boundingBox[2] + modifier):
+                boundingBox = (boundingBox[0], boundingBox[1], boundingBox[2] + modifier, boundingBox[3])
+        elif border == self.Border.BOTTOM:
+            if boundingBox[1] < (boundingBox[3] + modifier):
+                boundingBox = (boundingBox[0], boundingBox[1], boundingBox[2], boundingBox[3] + modifier)
+        elif border == self.Border.LEFT:
+            if (boundingBox[0] - modifier) < boundingBox[2]:
+                boundingBox = (boundingBox[0] - modifier, boundingBox[1], boundingBox[2], boundingBox[3])
+        return boundingBox
+    
+    """"
+    Checks if coordinates fit on screen.
+
+    Returns
+    -------
+    bool
+        True if coordinates are ok, False else
+    """
+    def _check_monitor_dimensions(self, min_x: int, min_y: int, max_x: int, max_y: int) -> bool:
+        if self._monitors == None:
+            self._monitors = get_monitors()
+
+        tl_ok = False
+        bl_ok = False
+        tr_ok = False
+        br_ok = False
+        for m in self._monitors:
+            min_x_ok = min_x <= (m.x + m.width) and min_x >= m.x
+            min_y_ok = min_y <= (m.y + m.height) and min_y >= m.y
+            max_x_ok = max_x <= (m.x + m.width) and max_x >= m.x
+            max_y_ok = max_y <= (m.y + m.height) and max_y >= m.y
+            if (min_x_ok and min_y_ok):
+                tl_ok = True
+            if (min_x_ok and max_y_ok):
+                bl_ok = True
+            if (max_x_ok and min_y_ok):
+                tr_ok = True
+            if (max_x_ok and max_y_ok):
+                br_ok = True
+        
+        return tl_ok and bl_ok and tr_ok and br_ok
+    
+    def _set_default_view_bounding_box(self):
+        if (self._monitors == None):
+            self._monitors = get_monitors()
+
+        if self._monitors != None and len(self._monitors) > 0:
+            primaryMonitor = next(monitor for monitor in self._monitors if monitor.is_primary == True)
+            self._set_view_to_monitor(primaryMonitor if primaryMonitor != None else self._monitors[0])
+
+    def _set_view_to_monitor(self, monitor: Monitor):
+        self._bounding_box = (monitor.x, monitor.y, monitor.x + monitor.width, monitor.y + monitor.height)
+        self._top_left = (self._bounding_box[0], self._bounding_box[1])
+        self._bottom_right = (self._bounding_box[2], self._bounding_box[3])
